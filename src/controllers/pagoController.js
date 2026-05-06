@@ -3,8 +3,17 @@ const axios = require('axios');
 exports.procesarPago = async (req, res) => {
   try {
     const { tarjeta } = req.body || {};
-    if (!tarjeta || tarjeta.numero === undefined || tarjeta.numero === null) {
-      return res.status(400).json({ error: 'Tarjeta no proporcionada' });
+    
+    if (!tarjeta || tarjeta.numero === undefined || tarjeta.numero === null || !tarjeta.cvc || !tarjeta.fechaExpiracion) {
+      return res.status(400).json({ error: 'Datos de tarjeta insuficientes' });
+    }
+    
+    if (typeof tarjeta.numero !== 'number' && typeof tarjeta.numero !== 'string') {
+      return res.status(400).json({ error: 'Número de tarjeta inválido' });
+    }
+
+    if (tarjeta.numero.length !== 16) {
+      return res.status(400).json({ error: 'Número de tarjeta inválido' });
     }
 
     const numeroStr = String(tarjeta.numero);
@@ -26,6 +35,6 @@ exports.procesarPago = async (req, res) => {
     if (err.response) {
       return res.status(err.response.status).send(err.response.data);
     }
-    return res.status(502).json({ error: 'Error al comunicarse con proveedor de pago' });
+    return res.status(502).json({ error: err.message || 'Error al procesar el pago' });
   }
 };
