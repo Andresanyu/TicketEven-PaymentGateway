@@ -1,40 +1,51 @@
 const axios = require('axios');
 
+const ADDR = process.env.ADDR || 'localhost';
+const PORT_VISA = process.env.PORT_VISA || '3001';
+const PORT_MASTER = process.env.PORT_MASTER || '3000';
+
+const URLS_PASARELA = {
+  '4': `http://${ADDR}:${PORT_VISA}/api/v1/visa/validar`,
+  '5': `http://${ADDR}:${PORT_MASTER}/api/v1/mastercard/validar`,
+};
+
+function validarTarjeta(tarjeta) {
+  if (!tarjeta || tarjeta.numero === undefined || tarjeta.numero === null || !tarjeta.cvc || !tarjeta.fechaExpiracion)
+    return 'Datos de tarjeta insuficientes';
+
+  if (typeof tarjeta.numero !== 'number' && typeof tarjeta.numero !== 'string')
+    return 'Número de tarjeta inválido';
+
+  if (String(tarjeta.numero).length !== 16)
+    return 'Número de tarjeta inválido';
+
+  return null;
+}
+
+function obtenerUrlPasarela(numero) {
+  const prefijo = String(numero)[0];
+  return URLS_PASARELA[prefijo] || null;
+}
+
 exports.procesarPago = async (req, res) => {
   try {
     const { tarjeta } = req.body || {};
-    
-    if (!tarjeta || tarjeta.numero === undefined || tarjeta.numero === null || !tarjeta.cvc || !tarjeta.fechaExpiracion) {
-      return res.status(400).json({ error: 'Datos de tarjeta insuficientes' });
-    }
-    
-    if (typeof tarjeta.numero !== 'number' && typeof tarjeta.numero !== 'string') {
-      return res.status(400).json({ error: 'Número de tarjeta inválido' });
-    }
 
-    if (tarjeta.numero.length !== 16) {
-      return res.status(400).json({ error: 'Número de tarjeta inválido' });
-    }
+    const errorValidacion = validarTarjeta(tarjeta);
+    if (errorValidacion)
+      return res.status(400).json({ error: errorValidacion });
 
-    const numeroStr = String(tarjeta.numero);
-
-    let url;
-    if (numeroStr.startsWith('4')) {
-      url = 'http://localhost:3001/api/v1/visa/validar';
-    } else if (numeroStr.startsWith('5')) {
-      url = 'http://localhost:3000/api/v1/mastercard/validar';
-    } else {
+    const url = obtenerUrlPasarela(tarjeta.numero);
+    if (!url)
       return res.status(400).json({ error: 'Tarjeta no soportada' });
-    }
 
-    // Allow forwarding of non-2xx responses instead of throwing
     const response = await axios.post(url, { tarjeta }, { validateStatus: () => true });
-
     return res.status(response.status).send(response.data);
+
   } catch (err) {
-    if (err.response) {
+    if (err.response)
       return res.status(err.response.status).send(err.response.data);
-    }
+
     return res.status(502).json({ error: err.message || 'Error al procesar el pago' });
   }
 };
