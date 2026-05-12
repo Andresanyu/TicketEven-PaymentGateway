@@ -1,12 +1,20 @@
 const axios = require('axios');
 
-const ADDR = process.env.ADDR || 'localhost';
-const PORT_VISA = process.env.PORT_VISA || '3001';
+const ADDR        = process.env.ADDR        || 'localhost';
+const PORT_VISA   = process.env.PORT_VISA   || '3001';
 const PORT_MASTER = process.env.PORT_MASTER || '3000';
 
-const URLS_PASARELA = {
-  '4': `http://${ADDR}:${PORT_VISA}/api/v1/visa/validar`,
-  '5': `http://${ADDR}:${PORT_MASTER}/api/v1/mastercard/validar`,
+const PASARELAS = {
+  '4': {
+    url: `http://${ADDR}:${PORT_VISA}/api/v1/visa/validar`,
+    mapearBody:    (tarjeta) => ({ pan_number: tarjeta.numero, cvv2: tarjeta.cvc }),
+    fueExitoso:    (data)    => data.transaction_status === 'APPROVED',
+  },
+  '5': {
+    url: `http://${ADDR}:${PORT_MASTER}/api/v1/mastercard/validar`,
+    mapearBody:    (tarjeta) => ({ number: String(tarjeta.numero), cvc: tarjeta.cvc }),
+    fueExitoso:    (data)    => data.payment_status === 'OK',
+  },
 };
 
 function validarTarjeta(tarjeta) {
@@ -22,9 +30,9 @@ function validarTarjeta(tarjeta) {
   return null;
 }
 
-function obtenerUrlPasarela(numero) {
+function obtenerPasarela(numero) {
   const prefijo = String(numero)[0];
-  return URLS_PASARELA[prefijo] || null;
+  return PASARELAS[prefijo] || null;
 }
 
 exports.procesarPago = async (req, res) => {
@@ -35,11 +43,13 @@ exports.procesarPago = async (req, res) => {
     if (errorValidacion)
       return res.status(400).json({ error: errorValidacion });
 
-    const url = obtenerUrlPasarela(tarjeta.numero);
-    if (!url)
+    const pasarela = obtenerPasarela(tarjeta.numero);
+    if (!pasarela)
       return res.status(400).json({ error: 'Tarjeta no soportada' });
 
-    const response = await axios.post(url, { tarjeta }, { validateStatus: () => true });
+    const body = pasarela.mapearBody(tarjeta);
+    const response = await axios.post(pasarela.url, body, { validateStatus: () => true });
+
     return res.status(response.status).send(response.data);
 
   } catch (err) {
