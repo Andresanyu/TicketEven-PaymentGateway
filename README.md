@@ -18,16 +18,9 @@ Ejecutar:
 npm start
 ```
 
-Endpoint:
-
-POST /api/v1/procesar-pago
-
-Body esperado:
-
-```json
-{
-  "tarjeta": { "numero": "4123456789012345" }
-}
+Documentacion:
+```
+http://localhost:3002/api/docs/
 ```
 # TicketEven-PaymentGateway
 Payment gateway designed for the TicketEvent platform

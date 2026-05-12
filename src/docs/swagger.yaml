@@ -1,0 +1,137 @@
+openapi: 3.0.0
+info:
+  title: API Procesamiento de Pagos
+  version: 1.0.0
+  description: Endpoint para procesar pagos con Visa y Mastercard
+
+servers:
+  - url: http://localhost:3000
+    description: Servidor local
+
+paths:
+  /api/v1/pago:
+    post:
+      summary: Procesar un pago con tarjeta
+      description: Valida y enruta el pago a Visa (prefijo 4) o Mastercard (prefijo 5)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PagoRequest'
+            examples:
+              visa:
+                summary: Pago con Visa
+                value:
+                  tarjeta:
+                    numero: "4111111111111111"
+                    cvc: "123"
+                    fechaExpiracion: "12/27"
+              mastercard:
+                summary: Pago con Mastercard
+                value:
+                  tarjeta:
+                    numero: "5500005555555559"
+                    cvc: "321"
+                    fechaExpiracion: "09/26"
+      responses:
+        '200':
+          description: Pago procesado (aprobado o rechazado por la pasarela)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/RespuestaVisa'
+                  - $ref: '#/components/schemas/RespuestaMastercard'
+        '400':
+          description: Datos de tarjeta inválidos o tarjeta no soportada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRequest'
+              examples:
+                datosInsuficientes:
+                  value:
+                    error: Datos de tarjeta insuficientes
+                numeroInvalido:
+                  value:
+                    error: Número de tarjeta inválido
+                noSoportada:
+                  value:
+                    error: Tarjeta no soportada
+        '502':
+          description: Error al conectar con la pasarela
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorGateway'
+
+components:
+  schemas:
+    Tarjeta:
+      type: object
+      required:
+        - numero
+        - cvc
+        - fechaExpiracion
+      properties:
+        numero:
+          type: string
+          minLength: 16
+          maxLength: 16
+          example: "4111111111111111"
+        cvc:
+          type: string
+          example: "123"
+        fechaExpiracion:
+          type: string
+          example: "12/27"
+
+    PagoRequest:
+      type: object
+      required:
+        - tarjeta
+      properties:
+        tarjeta:
+          $ref: '#/components/schemas/Tarjeta'
+
+    RespuestaVisa:
+      type: object
+      properties:
+        transaction_status:
+          type: string
+          enum: [APPROVED, DECLINED, ERROR]
+          example: APPROVED
+        details:
+          type: string
+          example: Pago aprobado por Visa
+        auth_code:
+          type: string
+          example: V-0000
+
+    RespuestaMastercard:
+      type: object
+      properties:
+        payment_status:
+          type: string
+          enum: [OK, FAILED]
+          example: OK
+        description:
+          type: string
+          example: Pago aprobado por Mastercard
+        auth_ref:
+          type: string
+          example: MC-9999
+
+    ErrorRequest:
+      type: object
+      properties:
+        error:
+          type: string
+
+    ErrorGateway:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Error al procesar el pago
