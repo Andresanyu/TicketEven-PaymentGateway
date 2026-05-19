@@ -4,7 +4,7 @@ Este servicio enruta peticiones de pago a dos mocks locales:
 - Visa: http://localhost:3001
 - Mastercard: http://localhost:3000
 
-Puerto por defecto: 3002
+Puerto por defecto: 3100
 
 Instalación:
 
@@ -20,7 +20,7 @@ npm start
 
 Documentacion:
 ```
-http://localhost:3002/api/docs/
+http://localhost:3100/api/docs/
 ```
 # TicketEven-PaymentGateway
 Payment gateway designed for the TicketEvent platform

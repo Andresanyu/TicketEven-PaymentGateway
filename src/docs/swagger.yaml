@@ -5,14 +5,14 @@ info:
   description: Endpoint para procesar pagos con Visa y Mastercard
 
 servers:
-  - url: http://localhost:3000
+  - url: http://localhost:3100
     description: Servidor local
 
 paths:
-  /api/v1/pago:
+  /api/v1/pay:
     post:
       summary: Procesar un pago con tarjeta
-      description: Valida y enruta el pago a Visa (prefijo 4) o Mastercard (prefijo 5)
+      description: Valida y enruta el pago a Visa o Mastercard según la franquicia enviada en el payload
       requestBody:
         required: true
         content:
@@ -24,16 +24,16 @@ paths:
                 summary: Pago con Visa
                 value:
                   tarjeta:
-                    numero: "4111111111111111"
-                    cvc: "123"
-                    fechaExpiracion: "12/27"
+                    pan_number: "4111111111111111"
+                    cvv: "123"
+                    franquicia: VISA
               mastercard:
                 summary: Pago con Mastercard
                 value:
                   tarjeta:
-                    numero: "5500005555555559"
-                    cvc: "321"
-                    fechaExpiracion: "09/26"
+                    pan_number: "5500005555555559"
+                    cvv: "321"
+                    franquicia: MASTERCARD
       responses:
         '200':
           description: Pago procesado (aprobado o rechazado por la pasarela)
@@ -71,21 +71,22 @@ components:
     Tarjeta:
       type: object
       required:
-        - numero
-        - cvc
-        - fechaExpiracion
+        - pan_number
+        - cvv
+        - franquicia
       properties:
-        numero:
+        pan_number:
           type: string
           minLength: 16
           maxLength: 16
           example: "4111111111111111"
-        cvc:
+        cvv:
           type: string
           example: "123"
-        fechaExpiracion:
+        franquicia:
           type: string
-          example: "12/27"
+          enum: [VISA, MASTERCARD]
+          example: VISA
 
     PagoRequest:
       type: object
